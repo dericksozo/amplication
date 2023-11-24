@@ -8,15 +8,17 @@ import { join, dirname } from "path";
 import { Env } from "../env";
 import { Traceable } from "@amplication/opentelemetry-nestjs";
 import { BuildJobsHandlerService } from "../build-job-handler/build-job-handler.service";
-import { KafkaProducerService } from "@amplication/util/nestjs/kafka";
+import { EmitArgs, KafkaProducerService } from "@amplication/util/nestjs/kafka";
 import {
   CodeGenerationFailure,
+  CodeGenerationFailureSchema,
   CodeGenerationSuccess,
   KAFKA_TOPICS,
 } from "@amplication/schema-registry";
 import { EnumJobStatus } from "../types";
 import { AmplicationLogger } from "@amplication/util/nestjs/logging";
 import { CodeGeneratorService } from "../code-generator/code-generator-catalog.service";
+import { InferType } from "yup";
 
 @Traceable()
 @Injectable()
@@ -80,15 +82,13 @@ export class BuildRunnerService {
       }
     } catch (error) {
       this.logger.error(error.message, error);
-      const failureEvent: CodeGenerationFailure.KafkaEvent = {
+
+      await this.producerService.emit({
+        topic: KAFKA_TOPICS.CODE_GENERATION_FAILURE_TOPIC,
         key: null,
         value: { buildId, codeGeneratorVersion, error },
-      };
-
-      await this.producerService.emitMessage(
-        KAFKA_TOPICS.CODE_GENERATION_FAILURE_TOPIC,
-        failureEvent
-      );
+        schema: CodeGenerationFailureSchema,
+      });
     }
   }
 
@@ -188,19 +188,12 @@ export class BuildRunnerService {
       }
     } catch (error) {
       if (otherJobsHaveNotFailed) {
-        const failureEvent: CodeGenerationFailure.KafkaEvent = {
+        await this.producerService.emit({
+          topic: KAFKA_TOPICS.CODE_GENERATION_FAILURE_TOPIC,
           key: null,
-          value: {
-            buildId,
-            codeGeneratorVersion,
-            error,
-          },
-        };
-
-        await this.producerService.emitMessage(
-          KAFKA_TOPICS.CODE_GENERATION_FAILURE_TOPIC,
-          failureEvent
-        );
+          value: { buildId, codeGeneratorVersion, error },
+          schema: CodeGenerationFailureSchema,
+        });
       }
     }
   }
@@ -228,15 +221,12 @@ export class BuildRunnerService {
       this.logger.error(error.message, error, { causeError: jobError });
     } finally {
       if (otherJobsHaveNotFailed) {
-        const failureEvent: CodeGenerationFailure.KafkaEvent = {
+        await this.producerService.emit({
+          topic: KAFKA_TOPICS.CODE_GENERATION_FAILURE_TOPIC,
           key: null,
           value: { buildId, codeGeneratorVersion, error: jobError },
-        };
-
-        await this.producerService.emitMessage(
-          KAFKA_TOPICS.CODE_GENERATION_FAILURE_TOPIC,
-          failureEvent
-        );
+          schema: CodeGenerationFailureSchema,
+        });
       }
     }
   }

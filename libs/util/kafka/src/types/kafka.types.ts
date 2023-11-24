@@ -12,3 +12,9 @@ export interface DecodedKafkaMessage {
 export type KafkaMessage = Pick<FullKafkaMessage, "key" | "value" | "headers">;
 
 export type SchemaIds = { keySchemaId?: number; valueSchemaId?: number };
+
+export interface DecodedKafkaMessageV2<K, V> {
+  key: K;
+  value: V;
+  headers?: IHeaders;
+}

@@ -34,3 +34,6 @@ export enum KAFKA_TOPICS {
   USER_ACTION_TOPIC = "user-action.internal.1",
   USER_BUILD_TOPIC = "user-build.internal.1",
 }
+
+export * from "./code-generation-failure";
+export * from "./base-schema";
